@@ -1,22 +1,42 @@
 package codesa.school_system_server.models;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.PrimaryKeyJoinColumn;
-import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
+import jakarta.persistence.Table;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.MapsId;
 
 @Entity
 @Table(name = "teachers")
-@PrimaryKeyJoinColumn(name = "id_user")
+public class Teacher {
+    @Id
+    private Long id;
 
-public class Teacher extends User {
-    @NotBlank(message = "La especialidad es obligatoria")
+    @OneToOne
+    @JoinColumn(name = "id_user")
+    @MapsId
+    private User user;
+
     private String especialidad;
-
-    @NotNull(message = "La fecha de contratación es obligatoria")
     private LocalDate fecha_contratacion;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
 
     public String getEspecialidad() {
         return especialidad;

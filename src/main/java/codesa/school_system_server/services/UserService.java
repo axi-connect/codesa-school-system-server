@@ -4,13 +4,14 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import codesa.school_system_server.models.User;
+import org.springframework.security.core.Authentication;
+import codesa.school_system_server.models.dto.UserCreateDTO;
 import codesa.school_system_server.error.dto.ResponseMessage;
 import codesa.school_system_server.repositories.UserRepository;
 import codesa.school_system_server.repositories.TokenRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
 import codesa.school_system_server.error.RestResponseExceptionHandler;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 @Service
 public class UserService {
@@ -26,13 +27,18 @@ public class UserService {
         this.tokenRepository = tokenRepository;
     }
 
-    public ResponseMessage createUser(User user) {
+    public ResponseMessage createUser(UserCreateDTO userDto) {
         try {
-            if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+            if (userRepository.findByEmail(userDto.getEmail()).isPresent()) {
                 return exceptionHandler.handleCustomException("El email ya está registrado", HttpStatus.BAD_REQUEST).getBody();
             }
-            
-            user.setPassword(passwordEncoder.encode(user.getPassword()));
+            User user = new User();
+            user.setEmail(userDto.getEmail());
+            user.setNombre(userDto.getNombre());
+            user.setApellido(userDto.getApellido());
+            user.setTelefono(userDto.getTelefono());
+            user.setFecha_nacimiento(userDto.getFecha_nacimiento());
+            user.setPassword(passwordEncoder.encode(userDto.getPassword()));
             User saved = userRepository.save(user);
             ResponseMessage response = new ResponseMessage();
             saved.setPassword(null);
@@ -108,6 +114,36 @@ public class UserService {
             return response;
         } catch (Exception e) {
             return exceptionHandler.handleCustomException("Error al eliminar usuario: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR).getBody();
+        }
+    }
+
+    public ResponseMessage updateUser(Long id, User userUpdate) {
+        try {
+            User user = userRepository.findById(id).orElse(null);
+            if (user == null) {
+                return exceptionHandler.handleCustomException("Usuario no encontrado", HttpStatus.NOT_FOUND).getBody();
+            }
+            // Validar que el email no esté repetido (excepto el del mismo usuario)
+            if (!user.getEmail().equals(userUpdate.getEmail()) && userRepository.findByEmail(userUpdate.getEmail()).isPresent()) {
+                return exceptionHandler.handleCustomException("El email ya está registrado por otro usuario", HttpStatus.BAD_REQUEST).getBody();
+            }
+            // Actualizar solo los campos permitidos (no la contraseña)
+            user.setEmail(userUpdate.getEmail());
+            user.setNombre(userUpdate.getNombre());
+            user.setApellido(userUpdate.getApellido());
+            user.setTelefono(userUpdate.getTelefono());
+            user.setFecha_nacimiento(userUpdate.getFecha_nacimiento());
+
+            User saved = userRepository.save(user);
+            saved.setPassword(null);
+            ResponseMessage response = new ResponseMessage();
+            response.setData(saved);
+            response.setSuccessful(true);
+            response.setMessage("Usuario actualizado exitosamente");
+            response.setStatus(HttpStatus.OK);
+            return response;
+        } catch (Exception e) {
+            return exceptionHandler.handleCustomException("Error al actualizar usuario: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR).getBody();
         }
     }
 }

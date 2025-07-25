@@ -4,38 +4,19 @@ import java.time.LocalDate;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Inheritance;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
-import jakarta.persistence.InheritanceType;
-import jakarta.validation.constraints.*;
-
 @Entity
 @Table(name = "users")
-@Inheritance(strategy = InheritanceType.JOINED)
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id_user;
-
-    @NotBlank(message = "El email es obligatorio")
-    @Email(message = "El email debe ser válido")
     private String email;
-
-    @NotBlank(message = "El nombre es obligatorio")
     private String nombre;
-
-    @NotBlank(message = "El apellido es obligatorio")
     private String apellido;
-
-    @Pattern(regexp = "^$|^[0-9]{7,15}$", message = "El teléfono debe ser numérico y tener entre 7 y 15 dígitos")
     private String telefono;
-
-    @NotBlank(message = "La contraseña es obligatoria")
-    @Size(min = 6, message = "La contraseña debe tener al menos 6 caracteres")
     private String password;
-
-    @NotNull(message = "La fecha de nacimiento es obligatoria")
     private LocalDate fecha_nacimiento;
 
     public Long getId_user() {
