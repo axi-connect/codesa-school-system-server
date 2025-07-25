@@ -1,24 +1,29 @@
 package codesa.school_system_server.services;
 
 import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import codesa.school_system_server.models.User;
-import codesa.school_system_server.repositories.UserRepository;
-import codesa.school_system_server.error.RestResponseExceptionHandler;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import codesa.school_system_server.error.dto.ResponseMessage;
+import codesa.school_system_server.repositories.UserRepository;
+import codesa.school_system_server.repositories.TokenRepository;
+import codesa.school_system_server.error.RestResponseExceptionHandler;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Service
 public class UserService {
     private final UserRepository userRepository;
-    private final RestResponseExceptionHandler exceptionHandler;
     private final PasswordEncoder passwordEncoder;
+    private final TokenRepository tokenRepository;
+    private final RestResponseExceptionHandler exceptionHandler;
 
-    public UserService(UserRepository userRepository, RestResponseExceptionHandler exceptionHandler, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, RestResponseExceptionHandler exceptionHandler, PasswordEncoder passwordEncoder, TokenRepository tokenRepository) {
         this.userRepository = userRepository;
         this.exceptionHandler = exceptionHandler;
         this.passwordEncoder = passwordEncoder;
+        this.tokenRepository = tokenRepository;
     }
 
     public ResponseMessage createUser(User user) {
@@ -58,6 +63,7 @@ public class UserService {
     public ResponseMessage getAllUsers() {
         try {
             List<User> users = userRepository.findAll();
+            users.forEach(u -> u.setPassword(null));
             ResponseMessage response = new ResponseMessage();
             response.setData(users);
             response.setSuccessful(true);
@@ -73,6 +79,21 @@ public class UserService {
         try {
             ResponseMessage response = new ResponseMessage();
             if (userRepository.existsById(id)) {
+                // Verificar si el usuario autenticado es el mismo que se intenta eliminar
+                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                String currentUsername = authentication != null ? authentication.getName() : null;
+                User user = userRepository.findById(id).orElse(null);
+                if (user != null && user.getEmail().equals(currentUsername)) {
+                    response.setSuccessful(false);
+                    response.setData(null);
+                    response.setMessage("No puedes eliminar tu propio usuario mientras estás logueado.");
+                    response.setStatus(HttpStatus.FORBIDDEN);
+                    return response;
+                }
+                if (user != null) {
+                    // Eliminar tokens asociados antes de eliminar el usuario
+                    tokenRepository.deleteByUser(user);
+                }
                 userRepository.deleteById(id);
                 response.setSuccessful(true);
                 response.setData(null);
